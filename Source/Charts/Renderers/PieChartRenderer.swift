@@ -354,7 +354,9 @@ open class PieChartRenderer: DataRenderer
 
 
                 let pe = e as? PieChartDataEntry
-                if pe?.value == 0 {
+
+                if let value = pe?.value, value >= 0.001 {
+                } else {
                     continue
                 }
 

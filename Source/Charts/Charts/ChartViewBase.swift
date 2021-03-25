@@ -248,6 +248,8 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     @objc open func clearValues()
     {
         _data?.clearValues()
+        _indicesToHighlight.removeAll()
+        lastHighlighted = nil
         setNeedsDisplay()
     }
 
