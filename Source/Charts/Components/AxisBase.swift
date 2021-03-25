@@ -127,27 +127,29 @@ open class AxisBase: ComponentBase
             return granularityEnabled
         }
     }
-    
+
+    @objc open var roundedToSignficantEnabled = true
+
     /// if true, the set number of y-labels will be forced
     @objc open var forceLabelsEnabled = false
-    
+
     @objc open func getLongestLabel() -> String
     {
         var longest = ""
-        
+
         for i in 0 ..< entries.count
         {
             let text = getFormattedLabel(i)
-            
+
             if longest.count < text.count
             {
                 longest = text
             }
         }
-        
+
         return longest
     }
-    
+
     /// - Returns: The formatted label at the specified index. This will either use the auto-formatter or the custom formatter (if one is set).
     @objc open func getFormattedLabel(_ index: Int) -> String
     {
@@ -339,9 +341,10 @@ open class AxisBase: ComponentBase
             _customAxisMax = true
             _axisMaximum = newValue
             axisRange = abs(newValue - _axisMinimum)
+            roundedToSignficantEnabled = false
         }
     }
-    
+
     /// Calculates the minimum, maximum and range values of the YAxis with the given minimum and maximum values from the chart data.
     ///
     /// - Parameters:
