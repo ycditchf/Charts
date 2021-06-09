@@ -355,11 +355,6 @@ open class PieChartRenderer: DataRenderer
 
                 let pe = e as? PieChartDataEntry
 
-                if let value = pe?.value, value >= 0.001 {
-                } else {
-                    continue
-                }
-
                 if xIndex == 0
                 {
                     angle = 0.0

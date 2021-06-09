@@ -206,7 +206,7 @@ open class ChartBaseDataSet: NSObject, IChartDataSet, NSCopying
         if index < 0
         {
             index = 0
-        }
+        }        
         return colors[index % colors.count]
     }
     
