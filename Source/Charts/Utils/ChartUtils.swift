@@ -80,7 +80,9 @@ extension CGSize
 extension Double
 {
     /// Rounds the number to the nearest multiple of it's order of magnitude, rounding away from zero if halfway.
-    func roundedToNextSignficant() -> Double
+    /// 不足10 的就按2的倍数 最小4 超过10 就走log
+    /// - Returns: <#description#>
+    public func roundedToNextSignficant() -> Double
     {
         guard
             !isInfinite,
@@ -88,13 +90,42 @@ extension Double
             self != 0
             else { return self }
 
-        let d = ceil(log10(self < 0 ? -self : self))
-        let pw = 1 - Int(d)
-        let magnitude = pow(10.0, Double(pw))
-        let shifted = (self * magnitude).rounded()
-        return shifted / magnitude
+        // TODO: 不知道为啥不行
+//        if self < 10 && self > -10 {
+//            return log2Signficant()
+//        } else {
+            return log10Signficant()
+//        }
     }
 
+    public func log2Signficant() -> Double {
+        let d = ceil(log2(self < 0 ? -self : self))
+//        print("d>>\(d)")
+        let pw = 1 - Int(d)
+        let magnitude = pow(2, Double(pw))
+        let shifted = ceil( fabs(self) * magnitude)
+        if self < 0 {
+            return -shifted / magnitude
+        } else {
+            return max(shifted / magnitude, 4)
+        }
+    }
+
+
+    public func log10Signficant() -> Double {
+        let d = ceil(log10(self < 0 ? -self : self))
+//        print("d>>\(d)")
+        let pw = 1 - Int(d)
+        let magnitude = pow(10.0, Double(pw))
+        let shifted = ceil( fabs(self) * magnitude)
+        if self < 0 {
+            return -shifted / magnitude
+        } else {
+            return shifted / magnitude
+        }
+    }
+
+    // 小数点精读
     var decimalPlaces: Int
     {
         guard
@@ -103,8 +134,11 @@ extension Double
             self != 0.0
             else { return 0 }
 
-        let i = self.roundedToNextSignficant()
+//        if self < 10 && self > -10 {
+//            return 1
+//        }
 
+        let i = self.roundedToNextSignficant()
         guard
             !i.isInfinite,
             !i.isNaN
