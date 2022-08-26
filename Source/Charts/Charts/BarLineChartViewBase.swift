@@ -124,23 +124,24 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         self.highlighter = ChartHighlighter(chart: self)
         
         _tapGestureRecognizer = NSUITapGestureRecognizer(target: self, action: #selector(tapGestureRecognized(_:)))
+
         _doubleTapGestureRecognizer = NSUITapGestureRecognizer(target: self, action: #selector(doubleTapGestureRecognized(_:)))
         _doubleTapGestureRecognizer.nsuiNumberOfTapsRequired = 2
         _panGestureRecognizer = NSUIPanGestureRecognizer(target: self, action: #selector(panGestureRecognized(_:)))
-        
+
         _panGestureRecognizer.delegate = self
-        
-        self.addGestureRecognizer(_tapGestureRecognizer)
-        self.addGestureRecognizer(_doubleTapGestureRecognizer)
-        self.addGestureRecognizer(_panGestureRecognizer)
-        
+
+//        self.addGestureRecognizer(_tapGestureRecognizer)
+//        self.addGestureRecognizer(_doubleTapGestureRecognizer)
+//        self.addGestureRecognizer(_panGestureRecognizer)
+
         _doubleTapGestureRecognizer.isEnabled = _doubleTapToZoomEnabled
         _panGestureRecognizer.isEnabled = _dragXEnabled || _dragYEnabled
 
         #if !os(tvOS)
         _pinchGestureRecognizer = NSUIPinchGestureRecognizer(target: self, action: #selector(BarLineChartViewBase.pinchGestureRecognized(_:)))
         _pinchGestureRecognizer.delegate = self
-        self.addGestureRecognizer(_pinchGestureRecognizer)
+//        self.addGestureRecognizer(_pinchGestureRecognizer)
         _pinchGestureRecognizer.isEnabled = _pinchZoomEnabled || _scaleXEnabled || _scaleYEnabled
         #endif
     }
@@ -173,6 +174,7 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func draw(_ rect: CGRect)
     {
         super.draw(rect)
+        
 
         guard data != nil, let renderer = renderer else { return }
         
@@ -538,23 +540,20 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         {
             return
         }
+
+        if !isHighLightPerTapEnabled { return }
         
-        if recognizer.state == NSUIGestureRecognizerState.ended
-        {
-            if !isHighLightPerTapEnabled { return }
-            
-            let h = getHighlightByTouchPoint(recognizer.location(in: self))
-            
-            if h === nil || h == self.lastHighlighted
-            {
-                lastHighlighted = nil
-                highlightValue(nil, callDelegate: true)
-            }
-            else
-            {
-                lastHighlighted = h
-                highlightValue(h, callDelegate: true)
-            }
+        let h = getHighlightByTouchPoint(recognizer.location(in: self))
+        
+        if recognizer.state == NSUIGestureRecognizerState.began
+        || recognizer.state == NSUIGestureRecognizerState.changed {
+            print("begin..")
+            lastHighlighted = h
+            highlightValue(h, callDelegate: true)
+        } else if recognizer.state == NSUIGestureRecognizerState.ended {
+            print("end")
+            lastHighlighted = nil
+            highlightValue(nil, callDelegate: true)
         }
     }
     
@@ -912,6 +911,7 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         return true
     }
     
+    /*
     #if !os(OSX)
     open override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool
     {
@@ -980,7 +980,7 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         
         return false
     }
-    
+    */
     /// MARK: Viewport modifiers
     
     /// Zooms in by 1.4, into the charts center.
@@ -1965,5 +1965,50 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         getTransformer(forAxis: .left).pixelToValues(&pt)
 
         return min(xAxis._axisMaximum, Double(pt.x))
+    }
+    
+    
+    open override func nsuiTouchesBegan(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
+    {
+        super.nsuiTouchesBegan(touches, withEvent: event)
+        
+        guard let touch = touches.first else { return }
+        
+        if !isHighLightPerTapEnabled { return }
+        
+        let h = getHighlightByTouchPoint(touch.location(in: self))
+        
+        lastHighlighted = h
+        highlightValue(h, callDelegate: true)
+    }
+    
+    open override func nsuiTouchesMoved(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
+    {
+        super.nsuiTouchesMoved(touches, withEvent: event)
+        guard let touch = touches.first else { return }
+        
+        if !isHighLightPerTapEnabled { return }
+        
+        let h = getHighlightByTouchPoint(touch.location(in: self))
+        
+        lastHighlighted = h
+        highlightValue(h, callDelegate: true)
+    }
+    
+    open override func nsuiTouchesEnded(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
+    {
+        print("class:\(String(describing: self)): \(#function)")
+        super.nsuiTouchesEnded(touches, withEvent: event)
+        lastHighlighted = nil
+        highlightValue(nil, callDelegate: true)
+    }
+    
+    open override func nsuiTouchesCancelled(_ touches: Set<NSUITouch>?, withEvent event: NSUIEvent?)
+    {
+        print("class:\(String(describing: self)): \(#function)")
+        super.nsuiTouchesCancelled(touches, withEvent: event)
+        lastHighlighted = nil
+        highlightValue(nil, callDelegate: true)
+
     }
 }

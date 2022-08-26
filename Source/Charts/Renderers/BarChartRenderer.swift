@@ -425,12 +425,26 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
                 break
             }
             
-            if !isSingleColor
-            {
-                // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
-                context.setFillColor(dataSet.color(atIndex: j).cgColor)
-            }
+//            if !isSingleColor
+//            {
+//                // Set the color for the currently drawn value. If the index is out of bounds, reuse colors.
+//                context.setFillColor(dataSet.color(atIndex: j).cgColor)
+//            }
             
+            // 高亮的显示颜色，其他的灰色
+            // 交互的时候一闪一闪的反而体验不太好
+            let chart = dataProvider as? BarChartView
+            let highlight = chart?.lastHighlighted
+            
+             
+            if (highlight == nil) || (highlight != nil && Int(highlight!.x-1) == j) {
+                context.setFillColor(dataSet.color(atIndex: j).cgColor)
+            } else {
+//                let color = UIColor(red: 231/255.0, green: 231/255.0, blue: 231/255.0, alpha: 1.000)
+//                context.setFillColor(color.cgColor)
+                context.setFillColor(dataSet.color(atIndex: j).withAlphaComponent(0.3).cgColor)
+            }
+
             context.fill(barRect)
             
             if drawBorder
@@ -751,6 +765,7 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
         
     }
     
+
     open override func drawHighlighted(context: CGContext, indices: [Highlight])
     {
         guard
