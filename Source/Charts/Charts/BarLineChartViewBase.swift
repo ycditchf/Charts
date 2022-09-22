@@ -98,6 +98,9 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     
     /// flag that indicates if a custom viewport offset has been set
     private var _customViewPortEnabled = false
+    // 延迟显示 highlight，否则会闪一下
+    private var _delayShowHighLight = false
+    private var _showHighLight = false
     
     public override init(frame: CGRect)
     {
@@ -1971,20 +1974,34 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func nsuiTouchesBegan(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
         super.nsuiTouchesBegan(touches, withEvent: event)
-        
-        guard let touch = touches.first else { return }
-        
-        if !isHighLightPerTapEnabled { return }
-        
-        let h = getHighlightByTouchPoint(touch.location(in: self))
-        
-        lastHighlighted = h
-        highlightValue(h, callDelegate: true)
+        _delayShowHighLight = true
+
+        // 避免因为其他手势接收后闪现
+        DispatchQueue.main.asyncAfter(deadline: .now()+0.1, execute: DispatchWorkItem(block: {
+            if !self._delayShowHighLight {
+                return
+            }
+            self._showHighLight = true
+            
+            guard let touch = touches.first else { return }
+            
+            if !self.isHighLightPerTapEnabled { return }
+            
+            let h = self.getHighlightByTouchPoint(touch.location(in: self))
+            
+            self.lastHighlighted = h
+            self.highlightValue(h, callDelegate: true)
+        }))
+
     }
     
     open override func nsuiTouchesMoved(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
         super.nsuiTouchesMoved(touches, withEvent: event)
+
+        if !_showHighLight {
+            return
+        }
         guard let touch = touches.first else { return }
         
         if !isHighLightPerTapEnabled { return }
@@ -1997,8 +2014,10 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     
     open override func nsuiTouchesEnded(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
-        print("class:\(String(describing: self)): \(#function)")
+//        print("class:\(String(describing: self)): \(#function)")
         super.nsuiTouchesEnded(touches, withEvent: event)
+        _showHighLight = false
+        _delayShowHighLight = false
         lastHighlighted = nil
         highlightValue(nil, callDelegate: true)
     }
@@ -2007,6 +2026,8 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     {
         print("class:\(String(describing: self)): \(#function)")
         super.nsuiTouchesCancelled(touches, withEvent: event)
+        _showHighLight = false
+        _delayShowHighLight = false
         lastHighlighted = nil
         highlightValue(nil, callDelegate: true)
 
