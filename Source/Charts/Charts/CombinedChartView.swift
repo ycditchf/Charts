@@ -241,6 +241,7 @@ open class CombinedChartView: BarLineChartViewBase, CombinedChartDataProvider
             
             // draw the marker
             marker.draw(context: context, point: pos)
+            print("draw marker...\(marker)")
         }
     }
 }
