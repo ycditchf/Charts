@@ -136,7 +136,7 @@ open class LineChartRenderer: LineRadarRenderer
                 prevPrev = prev
                 prev = cur
                 cur = nextIndex == j ? next : dataSet.entryForIndex(j)
-                
+
                 nextIndex = j + 1 < dataSet.entryCount ? j + 1 : j
                 next = dataSet.entryForIndex(nextIndex)
                 
@@ -146,18 +146,24 @@ open class LineChartRenderer: LineRadarRenderer
                 prevDy = CGFloat(cur.y - prevPrev.y) * intensity
                 curDx = CGFloat(next.x - prev.x) * intensity
                 curDy = CGFloat(next.y - prev.y) * intensity
-                
-                cubicPath.addCurve(
-                    to: CGPoint(
+
+                if prev.y == 0 && cur.y == 0 {
+                    cubicPath.addLine(to: CGPoint(
                         x: CGFloat(cur.x),
-                        y: CGFloat(cur.y) * CGFloat(phaseY)),
-                    control1: CGPoint(
-                        x: CGFloat(prev.x) + prevDx,
-                        y: (CGFloat(prev.y) + prevDy) * CGFloat(phaseY)),
-                    control2: CGPoint(
-                        x: CGFloat(cur.x) - curDx,
-                        y: (CGFloat(cur.y) - curDy) * CGFloat(phaseY)),
-                    transform: valueToPixelMatrix)
+                        y: CGFloat(cur.y) * CGFloat(phaseY)), transform: valueToPixelMatrix)
+                } else {
+                    cubicPath.addCurve(
+                        to: CGPoint(
+                            x: CGFloat(cur.x),
+                            y: CGFloat(cur.y) * CGFloat(phaseY)),
+                        control1: CGPoint(
+                            x: CGFloat(prev.x) + prevDx,
+                            y: (CGFloat(prev.y) + prevDy) * CGFloat(phaseY)),
+                        control2: CGPoint(
+                            x: CGFloat(cur.x) - curDx,
+                            y: (CGFloat(cur.y) - curDy) * CGFloat(phaseY)),
+                        transform: valueToPixelMatrix)
+                }
             }
         }
         
