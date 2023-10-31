@@ -244,4 +244,16 @@ open class CombinedChartView: BarLineChartViewBase, CombinedChartDataProvider
             print("draw marker...\(marker)")
         }
     }
+    
+    @objc open override func clearValues()
+    {
+        _data?.clearValues()
+        (_data as? CombinedChartData)?.allData.forEach({ chatData in
+            chatData.clearValues()
+        })
+        _indicesToHighlight.removeAll()
+        lastHighlighted = nil
+        setNeedsDisplay()
+    }
 }
+

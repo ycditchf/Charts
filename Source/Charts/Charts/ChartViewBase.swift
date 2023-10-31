@@ -522,7 +522,7 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     {
         var entry: ChartDataEntry?
         var h = highlight
-        print("highlight:\(h)")
+//        print("highlight:\(h)")
         if h == nil
         {
             self.lastHighlighted = nil
@@ -532,7 +532,7 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
         {
             // set the indices to highlight
             entry = _data?.entryForHighlight(h!)
-            print("entry:\(entry)")
+//            print("entry:\(entry)")
             if entry == nil
             {
                 h = nil
