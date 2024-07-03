@@ -376,6 +376,10 @@ open class PieChartRenderer: DataRenderer
                 let transformedAngle = rotationAngle + angle * CGFloat(phaseY)
 
                 let value = usePercentValuesEnabled ? e.y / yValueSum * 100.0 : e.y
+                //低于这个数，不显示
+                if value < dataSet.drawMinValue {
+                    continue
+                }
                 let valueText = formatter.stringForValue(
                     value,
                     entry: e,

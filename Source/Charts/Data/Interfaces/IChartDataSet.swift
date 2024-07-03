@@ -244,6 +244,9 @@ public protocol IChartDataSet
     /// - Note: For bar and line charts: if `maxVisibleCount` is reached, no values will be drawn even if this is enabled.
     var drawValuesEnabled: Bool { get set }
     
+    // 低于多少不显示，饼图
+    var drawMinValue: CGFloat { get set }
+    
     /// `true` if y-value drawing is enabled, `false` ifnot
     var isDrawValuesEnabled: Bool { get }
     
