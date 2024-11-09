@@ -98,6 +98,21 @@ extension Double
 //        }
     }
 
+    func roundedToNextSignificant() -> Double
+    {
+        guard
+            !isInfinite,
+            !isNaN,
+            self != 0
+            else { return self }
+
+        let d = ceil(log10(self < 0 ? -self : self))
+        let pw = 1 - Int(d)
+        let magnitude = pow(10.0, Double(pw))
+        let shifted = (self * magnitude).rounded()
+        return shifted / magnitude
+    }
+    
     public func log2Signficant() -> Double {
         let d = ceil(log2(self < 0 ? -self : self))
 //        print("d>>\(d)")
