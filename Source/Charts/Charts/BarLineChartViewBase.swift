@@ -1974,8 +1974,9 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func nsuiTouchesBegan(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
         super.nsuiTouchesBegan(touches, withEvent: event)
+        parentScrollView?.isScrollEnabled = false
         _delayShowHighLight = true
-
+        print("class:\(String(describing: self)): \(#function)")
         // 避免因为其他手势接收后闪现
         DispatchQueue.main.asyncAfter(deadline: .now()+0.1, execute: DispatchWorkItem(block: {
             if !self._delayShowHighLight {
@@ -1998,7 +1999,7 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func nsuiTouchesMoved(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
         super.nsuiTouchesMoved(touches, withEvent: event)
-
+//        print("class:\(String(describing: self)): \(#function)")
         if !_showHighLight {
             return
         }
@@ -2014,8 +2015,10 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     
     open override func nsuiTouchesEnded(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
-//        print("class:\(String(describing: self)): \(#function)")
+        print("class:\(String(describing: self)): \(#function)")
+
         super.nsuiTouchesEnded(touches, withEvent: event)
+        parentScrollView?.isScrollEnabled = true
         _showHighLight = false
         _delayShowHighLight = false
         lastHighlighted = nil
@@ -2026,10 +2029,20 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     {
         print("class:\(String(describing: self)): \(#function)")
         super.nsuiTouchesCancelled(touches, withEvent: event)
+        parentScrollView?.isScrollEnabled = true
         _showHighLight = false
         _delayShowHighLight = false
         lastHighlighted = nil
         highlightValue(nil, callDelegate: true)
 
+    }
+    
+    var parentScrollView: UIScrollView? {
+        var v = self.superview
+        while v != nil {
+            if let s = v as? UIScrollView { return s }
+            v = v?.superview
+        }
+        return nil
     }
 }
