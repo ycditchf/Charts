@@ -270,7 +270,18 @@ open class LineChartRenderer: LineRadarRenderer
         
         let fillMin = dataSet.fillFormatter?.getFillLinePosition(dataSet: dataSet, dataProvider: dataProvider) ?? 0.0
 
-        var pt1 = CGPoint(x: CGFloat(dataSet.entryForIndex(bounds.min + bounds.range)?.x ?? 0.0), y: fillMin)
+        // 找到最后一个有效数据点（非 NAN）
+        var lastValidIndex = bounds.min + bounds.range
+        for x in stride(from: bounds.min + bounds.range, through: bounds.min, by: -1)
+        {
+            if let entry = dataSet.entryForIndex(x), !entry.y.isNaN
+            {
+                lastValidIndex = x
+                break
+            }
+        }
+        
+        var pt1 = CGPoint(x: CGFloat(dataSet.entryForIndex(lastValidIndex)?.x ?? 0.0), y: fillMin)
         var pt2 = CGPoint(x: CGFloat(dataSet.entryForIndex(bounds.min)?.x ?? 0.0), y: fillMin)
         pt1 = pt1.applying(matrix)
         pt2 = pt2.applying(matrix)
@@ -415,6 +426,7 @@ open class LineChartRenderer: LineRadarRenderer
         let matrix = matrix
         
         var e: ChartDataEntry!
+        var lastValidEntry: ChartDataEntry? = nil  // 记录最后一个有效数据点
         
         let filled = CGMutablePath()
         
@@ -429,6 +441,7 @@ open class LineChartRenderer: LineRadarRenderer
         for x in stride(from: (bounds.min + 1), through: bounds.range + bounds.min, by: 1)
         {
             guard let e = dataSet.entryForIndex(x) else { continue }
+            guard !e.y.isNaN else { continue }  // 跳过 NAN 值
             
             if isDrawSteppedEnabled
             {
@@ -437,13 +450,15 @@ open class LineChartRenderer: LineRadarRenderer
             }
             
             filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY)), transform: matrix)
+            lastValidEntry = e  // 更新最后有效数据点
         }
         
         // close up
-        e = dataSet.entryForIndex(bounds.range + bounds.min)
-        if e != nil
+        // 使用最后一个有效数据点，而不是 bounds 的最后一个索引
+        if let validEntry = lastValidEntry
         {
-            filled.addLine(to: CGPoint(x: CGFloat(e.x), y: fillMin), transform: matrix)
+            // 从最后有效点垂直下降到 fillMin
+            filled.addLine(to: CGPoint(x: CGFloat(validEntry.x), y: fillMin), transform: matrix)
         }
         filled.closeSubpath()
         
