@@ -153,7 +153,7 @@ open class YAxis: AxisBase
         // if custom, use value as is, else use data value
         var min = _customAxisMin ? _axisMinimum : dataMin
         var max = _customAxisMax ? _axisMaximum : dataMax
-        
+
         // Make sure max is greater than min
         // Discussion: https://github.com/danielgindi/Charts/pull/3650#discussion_r221409991
         if min > max
@@ -170,31 +170,34 @@ open class YAxis: AxisBase
                 break
             }
         }
-        
+
         // temporary range (before calculations)
-        let range = abs(max - min)
-        
+        var range = abs(max - min)
+
         // in case all values are equal
         if range == 0.0
         {
             max = max + 1.0
             min = min - 1.0
+            range = 2.0
         }
-        
-        // bottom-space only effects non-custom min
+
+        // 使用 Nice Numbers 算法计算轴范围
         if !_customAxisMin
         {
-            let bottomSpace = range * Double(spaceBottom)
-            _axisMinimum = (min - bottomSpace)
+            // 对于最小值，向下取整到漂亮数字
+            // 但通常 axisMinimum 会被外部设置为 0，所以这里较少执行
+            let niceMin = min.niceNumber(round: false)
+            _axisMinimum = niceMin > min ? min : niceMin
         }
-        
-        // top-space only effects non-custom max
+
         if !_customAxisMax
         {
-            let topSpace = range * Double(spaceTop)
-            _axisMaximum = (max + topSpace)
+            // 对于最大值，直接向上取整到漂亮数字
+            // 例如: 8→10, 10→10, 23→25, 47→50
+            _axisMaximum = max.niceNumber(round: false)
         }
-        
+
         // calc actual range
         axisRange = abs(_axisMaximum - _axisMinimum)
     }
@@ -214,6 +217,9 @@ open class YAxis: AxisBase
     /// 是否启用 Y 轴平滑过渡动画
     private var _enableAxisSmoothTransition: Bool = false
 
+    /// 过渡期间需要额外渲染的旧刻度（超出新范围的部分）
+    @objc open var transitionEntries: [Double] = []
+
     /// 配置 Y 轴平滑过渡动画
     @objc open func configureAxisSmoothTransition(fromMin: Double, fromMax: Double) {
         self._fromAxisMinimum = fromMin
@@ -221,9 +227,19 @@ open class YAxis: AxisBase
         self._enableAxisSmoothTransition = true
     }
 
+    /// 配置 Y 轴平滑过渡动画（带旧刻度）
+    @objc open func configureAxisSmoothTransition(fromMin: Double, fromMax: Double, fromEntries: [Double]) {
+        self._fromAxisMinimum = fromMin
+        self._fromAxisMaximum = fromMax
+        self._enableAxisSmoothTransition = true
+        // 保存超出新范围的旧刻度，让它们能自然移出视图
+        self.transitionEntries = fromEntries.filter { $0 > _axisMaximum || $0 < _axisMinimum }
+    }
+
     /// 禁用 Y 轴平滑过渡动画
     @objc open func disableAxisSmoothTransition() {
         self._enableAxisSmoothTransition = false
+        self.transitionEntries = []
     }
 
     /// 是否启用 Y 轴平滑过渡

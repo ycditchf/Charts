@@ -161,6 +161,35 @@ extension Double
 
         return Int(ceil(-log10(i))) + 2
     }
+
+    /// 将数字规范化为漂亮数字 (1, 2, 2.5, 5 的倍数)
+    /// - Parameter round: true=四舍五入（用于间距）, false=向上取整（用于轴范围）
+    /// - Returns: 漂亮数字
+    public func niceNumber(round: Bool = false) -> Double {
+        guard self > 0, !isNaN, !isInfinite else { return self }
+
+        let exponent = floor(log10(self))
+        let fraction = self / pow(10, exponent)
+
+        let niceFraction: Double
+        if round {
+            // 四舍五入模式（用于间距）
+            if fraction < 1.5 { niceFraction = 1 }
+            else if fraction < 3 { niceFraction = 2 }
+            else if fraction < 7 { niceFraction = 5 }
+            else { niceFraction = 10 }
+        } else {
+            // 向上取整模式（用于轴范围）
+            // 使用 1, 2, 2.5, 5, 10 作为漂亮数字，让 23→25, 8→10
+            if fraction <= 1 { niceFraction = 1 }
+            else if fraction <= 2 { niceFraction = 2 }
+            else if fraction <= 2.5 { niceFraction = 2.5 }
+            else if fraction <= 5 { niceFraction = 5 }
+            else { niceFraction = 10 }
+        }
+
+        return niceFraction * pow(10, exponent)
+    }
 }
 
 extension CGPoint
