@@ -135,19 +135,27 @@ open class YAxisRenderer: AxisRendererBase
         guard
             let yAxis = self.axis as? YAxis
             else { return }
-        
+
         let labelFont = yAxis.labelFont
         let labelTextColor = yAxis.labelTextColor
-        
+
+        // 获取所有刻度（包括过渡刻度）
+        let entries = allEntries()
+        let entryCount = entries.count
+
         let from = yAxis.isDrawBottomYLabelEntryEnabled ? 0 : 1
-        let to = yAxis.isDrawTopYLabelEntryEnabled ? yAxis.entryCount : (yAxis.entryCount - 1)
-        
+        let to = yAxis.isDrawTopYLabelEntryEnabled ? entryCount : (entryCount - 1)
+
         let xOffset = yAxis.labelXOffset
-        
+
         for i in stride(from: from, to: to, by: 1)
         {
-            let text = yAxis.getFormattedLabel(i)
-            
+            guard i < entries.count && i < positions.count else { continue }
+
+            // 格式化刻度值
+            let value = entries[i]
+            let text = yAxis.valueFormatter?.stringForValue(value, axis: yAxis) ?? String(format: "%.0f", value)
+
             ChartUtils.drawText(
                 context: context,
                 text: text,
@@ -228,20 +236,37 @@ open class YAxisRenderer: AxisRendererBase
             let yAxis = self.axis as? YAxis,
             let transformer = self.transformer
             else { return [CGPoint]() }
-        
+
+        // 合并当前刻度和过渡刻度
+        var allEntries = yAxis.entries
+        if yAxis.enableAxisSmoothTransition && !yAxis.transitionEntries.isEmpty {
+            allEntries.append(contentsOf: yAxis.transitionEntries)
+            allEntries.sort()
+        }
+
         var positions = [CGPoint]()
-        positions.reserveCapacity(yAxis.entryCount)
-        
-        let entries = yAxis.entries
-        
-        for i in stride(from: 0, to: yAxis.entryCount, by: 1)
+        positions.reserveCapacity(allEntries.count)
+
+        for entry in allEntries
         {
-            positions.append(CGPoint(x: 0.0, y: entries[i]))
+            positions.append(CGPoint(x: 0.0, y: entry))
         }
 
         transformer.pointValuesToPixel(&positions)
-        
+
         return positions
+    }
+
+    /// 获取所有需要渲染的刻度值（包括过渡刻度）
+    @objc open func allEntries() -> [Double] {
+        guard let yAxis = self.axis as? YAxis else { return [] }
+
+        var allEntries = yAxis.entries
+        if yAxis.enableAxisSmoothTransition && !yAxis.transitionEntries.isEmpty {
+            allEntries.append(contentsOf: yAxis.transitionEntries)
+            allEntries.sort()
+        }
+        return allEntries
     }
 
     /// Draws the zero line at the specified position.
