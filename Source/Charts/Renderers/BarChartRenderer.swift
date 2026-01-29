@@ -123,6 +123,12 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
             x = e.x
             y = e.y
 
+            // 平滑过渡：在计算 top/bottom 之前用插值替换 y
+            let useSmoothTransition = e.enableSmoothTransition
+            if useSmoothTransition {
+                y = e.fromY + (e.y - e.fromY) * phaseY
+            }
+
             if !containsStacks || vals == nil
             {
                 let left = CGFloat(x - barWidthHalf)
@@ -210,13 +216,17 @@ open class BarChartRenderer: BarLineScatterCandleBubbleRenderer
 
                 // multiply the height of the rect with the phase
                 // explicitly add 0 + topOffset to indicate this is changed after adding accessibility support (#3650, #3520)
-                if top > 0 + topOffset
+                // 平滑过渡模式不需要乘以 phaseY，因为 y 已经是插值后的值了
+                if !useSmoothTransition
                 {
-                    top *= CGFloat(phaseY)
-                }
-                else
-                {
-                    bottom *= CGFloat(phaseY)
+                    if top > 0 + topOffset
+                    {
+                        top *= CGFloat(phaseY)
+                    }
+                    else
+                    {
+                        bottom *= CGFloat(phaseY)
+                    }
                 }
 
                 barRect.origin.x = left

@@ -24,7 +24,13 @@ open class BarChartDataEntry: ChartDataEntry
     
     /// the sum of all positive values this entry (if stacked) contains
     private var _positiveSum: Double = 0.0
-    
+
+    /// 平滑过渡动画的起始 Y 值
+    private var _fromY: Double = 0.0
+
+    /// 是否启用平滑过渡动画
+    private var _enableSmoothTransition: Bool = false
+
     public required init()
     {
         super.init()
@@ -195,7 +201,35 @@ open class BarChartDataEntry: ChartDataEntry
     {
         return _ranges
     }
-    
+
+    // MARK: - Smooth Transition Animation
+
+    /// 配置平滑过渡动画
+    /// - Parameters:
+    ///   - fromValue: 起始值（当前显示的值）
+    ///   - toValue: 目标值（新的数据值）
+    @objc open func configureSmoothTransition(from fromValue: Double, to toValue: Double) {
+        self._fromY = fromValue
+        self._enableSmoothTransition = true
+        self.y = toValue
+    }
+
+    /// 禁用平滑过渡动画，回归默认动画
+    @objc open func disableSmoothTransition() {
+        self._enableSmoothTransition = false
+        self._fromY = 0.0
+    }
+
+    /// 平滑过渡的起始值
+    @objc open var fromY: Double {
+        return _fromY
+    }
+
+    /// 是否启用平滑过渡动画
+    @objc open var enableSmoothTransition: Bool {
+        return _enableSmoothTransition
+    }
+
     // MARK: NSCopying
     
     open override func copy(with zone: NSZone? = nil) -> Any
@@ -205,6 +239,9 @@ open class BarChartDataEntry: ChartDataEntry
         copy.y = y
         copy._negativeSum = _negativeSum
         copy._positiveSum = _positiveSum
+        // 复制平滑过渡属性
+        copy._fromY = _fromY
+        copy._enableSmoothTransition = _enableSmoothTransition
         return copy
     }
     

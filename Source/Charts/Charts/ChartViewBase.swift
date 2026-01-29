@@ -115,7 +115,12 @@ open class ChartViewBase: NSUIView, ChartDataProvider, AnimatorDelegate
     
     /// object responsible for animations
     internal var _animator: Animator!
-    
+
+    /// 当前 Y 轴动画进度 (0.0 ~ 1.0)
+    @objc open var currentPhaseY: Double {
+        return _animator?.phaseY ?? 1.0
+    }
+
     /// flag that indicates if offsets calculation has already been done or not
     private var _offsetsCalculated = false
     
