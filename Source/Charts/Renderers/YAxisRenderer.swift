@@ -154,6 +154,13 @@ open class YAxisRenderer: AxisRendererBase
 
             // 格式化刻度值
             let value = entries[i]
+
+            // 如果刻度值是小数且 granularity 未启用，则跳过标签绘制（保持网格线）
+            // 这样可以在 yMax 较小时保持刻度数量，但不显示小数标签
+            if !yAxis.granularityEnabled && value.truncatingRemainder(dividingBy: 1.0) != 0 {
+                continue
+            }
+
             let text = yAxis.valueFormatter?.stringForValue(value, axis: yAxis) ?? String(format: "%.0f", value)
 
             ChartUtils.drawText(
