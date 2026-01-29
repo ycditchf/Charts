@@ -147,9 +147,19 @@ open class YAxis: AxisBase
     }
     
     @objc open var isInverted: Bool { return inverted }
-    
+
+    /// 当数据为空（dataMax == 0）时，是否保持当前轴范围不变
+    /// 默认为 false，设置为 true 后，切换到空数据时会保持之前的刻度范围
+    @objc open var keepAxisRangeWhenDataEmpty: Bool = false
+
     open override func calculate(min dataMin: Double, max dataMax: Double)
     {
+        // 如果启用了空数据保持轴范围，且新数据为空（max == 0），且当前有有效轴范围
+        // 则保持当前轴范围不变
+        if keepAxisRangeWhenDataEmpty && dataMax == 0 && axisRange > 0 {
+            return
+        }
+
         // if custom, use value as is, else use data value
         var min = _customAxisMin ? _axisMinimum : dataMin
         var max = _customAxisMax ? _axisMaximum : dataMax
