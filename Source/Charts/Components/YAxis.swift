@@ -200,7 +200,51 @@ open class YAxis: AxisBase
     }
     
     @objc open var isDrawBottomYLabelEntryEnabled: Bool { return drawBottomYLabelEntryEnabled }
-    
+
     @objc open var isDrawTopYLabelEntryEnabled: Bool { return drawTopYLabelEntryEnabled }
+
+    // MARK: - Axis Smooth Transition
+
+    /// 平滑过渡动画的起始最小值
+    private var _fromAxisMinimum: Double = 0.0
+
+    /// 平滑过渡动画的起始最大值
+    private var _fromAxisMaximum: Double = 0.0
+
+    /// 是否启用 Y 轴平滑过渡动画
+    private var _enableAxisSmoothTransition: Bool = false
+
+    /// 配置 Y 轴平滑过渡动画
+    @objc open func configureAxisSmoothTransition(fromMin: Double, fromMax: Double) {
+        self._fromAxisMinimum = fromMin
+        self._fromAxisMaximum = fromMax
+        self._enableAxisSmoothTransition = true
+    }
+
+    /// 禁用 Y 轴平滑过渡动画
+    @objc open func disableAxisSmoothTransition() {
+        self._enableAxisSmoothTransition = false
+    }
+
+    /// 是否启用 Y 轴平滑过渡
+    @objc open var enableAxisSmoothTransition: Bool {
+        return _enableAxisSmoothTransition
+    }
+
+    /// 获取插值后的轴最小值
+    @objc open func getInterpolatedAxisMinimum(phaseY: Double) -> Double {
+        if _enableAxisSmoothTransition {
+            return _fromAxisMinimum + (_axisMinimum - _fromAxisMinimum) * phaseY
+        }
+        return _axisMinimum
+    }
+
+    /// 获取插值后的轴最大值
+    @objc open func getInterpolatedAxisMaximum(phaseY: Double) -> Double {
+        if _enableAxisSmoothTransition {
+            return _fromAxisMaximum + (_axisMaximum - _fromAxisMaximum) * phaseY
+        }
+        return _axisMaximum
+    }
 
 }

@@ -177,16 +177,16 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func draw(_ rect: CGRect)
     {
         super.draw(rect)
-        
+
 
         guard data != nil, let renderer = renderer else { return }
-        
+
         let optionalContext = NSUIGraphicsGetCurrentContext()
         guard let context = optionalContext else { return }
 
         // execute all drawing commands
         drawGridBackground(context: context)
-        
+
 
         if _autoScaleMinMaxEnabled
         {
@@ -197,16 +197,20 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         {
             leftYAxisRenderer.computeAxis(min: leftAxis._axisMinimum, max: leftAxis._axisMaximum, inverted: leftAxis.isInverted)
         }
-        
+
         if rightAxis.isEnabled
         {
             rightYAxisRenderer.computeAxis(min: rightAxis._axisMinimum, max: rightAxis._axisMaximum, inverted: rightAxis.isInverted)
         }
-        
+
         if _xAxis.isEnabled
         {
             xAxisRenderer.computeAxis(min: _xAxis._axisMinimum, max: _xAxis._axisMaximum, inverted: false)
         }
+
+        // 在 computeAxis 之后更新变换矩阵（支持 Y 轴平滑过渡）
+        // 必须在 computeAxis 之后，否则会影响刻度值的计算
+        prepareValuePxMatrix()
         
         xAxisRenderer.renderAxisLine(context: context)
         leftYAxisRenderer.renderAxisLine(context: context)
@@ -330,8 +334,29 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     
     internal func prepareValuePxMatrix()
     {
-        _rightAxisTransformer.prepareMatrixValuePx(chartXMin: _xAxis._axisMinimum, deltaX: CGFloat(xAxis.axisRange), deltaY: CGFloat(rightAxis.axisRange), chartYMin: rightAxis._axisMinimum)
-        _leftAxisTransformer.prepareMatrixValuePx(chartXMin: xAxis._axisMinimum, deltaX: CGFloat(xAxis.axisRange), deltaY: CGFloat(leftAxis.axisRange), chartYMin: leftAxis._axisMinimum)
+        let phaseY = _animator?.phaseY ?? 1.0
+
+        // 左轴：使用插值后的范围
+        let leftMin = leftAxis.getInterpolatedAxisMinimum(phaseY: phaseY)
+        let leftMax = leftAxis.getInterpolatedAxisMaximum(phaseY: phaseY)
+        let leftRange = abs(leftMax - leftMin)
+
+        // 右轴：使用插值后的范围
+        let rightMin = rightAxis.getInterpolatedAxisMinimum(phaseY: phaseY)
+        let rightMax = rightAxis.getInterpolatedAxisMaximum(phaseY: phaseY)
+        let rightRange = abs(rightMax - rightMin)
+
+        _rightAxisTransformer.prepareMatrixValuePx(
+            chartXMin: _xAxis._axisMinimum,
+            deltaX: CGFloat(xAxis.axisRange),
+            deltaY: CGFloat(rightRange),
+            chartYMin: rightMin)
+
+        _leftAxisTransformer.prepareMatrixValuePx(
+            chartXMin: xAxis._axisMinimum,
+            deltaX: CGFloat(xAxis.axisRange),
+            deltaY: CGFloat(leftRange),
+            chartYMin: leftMin)
     }
     
     internal func prepareOffsetMatrix()
