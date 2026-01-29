@@ -24,6 +24,11 @@ public protocol ILineChartDataSet: ILineRadarChartDataSet
     ///
     /// **default**: Linear
     var mode: LineChartDataSet.Mode { get set }
+
+    /// The animation direction for this line dataset
+    ///
+    /// **default**: vertical (bottom-to-top using phaseY)
+    var animationDirection: LineChartDataSet.AnimationDirection { get set }
     
     /// Intensity for cubic lines (min = 0.05, max = 1)
     ///

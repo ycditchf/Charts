@@ -23,6 +23,16 @@ open class LineChartDataSet: LineRadarChartDataSet, ILineChartDataSet
         case cubicBezier
         case horizontalBezier
     }
+
+    /// Animation direction for line chart entry animation
+    @objc(LineChartAnimationDirection)
+    public enum AnimationDirection: Int
+    {
+        /// Default: bottom-to-top animation using phaseY
+        case vertical
+        /// Left-to-right drawing animation using phaseX
+        case horizontal
+    }
     
     private func initialize()
     {
@@ -50,6 +60,11 @@ open class LineChartDataSet: LineRadarChartDataSet, ILineChartDataSet
     ///
     /// **default**: Linear
     open var mode: Mode = Mode.linear
+
+    /// The animation direction for this line dataset
+    ///
+    /// **default**: vertical (bottom-to-top using phaseY)
+    open var animationDirection: AnimationDirection = .vertical
     
     private var _cubicIntensity = CGFloat(0.2)
     
@@ -167,6 +182,7 @@ open class LineChartDataSet: LineRadarChartDataSet, ILineChartDataSet
         copy.drawCirclesEnabled = drawCirclesEnabled
         copy.drawCircleHoleEnabled = drawCircleHoleEnabled
         copy.mode = mode
+        copy.animationDirection = animationDirection
         copy._fillFormatter = _fillFormatter
         return copy
     }

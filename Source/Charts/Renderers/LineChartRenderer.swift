@@ -49,15 +49,60 @@ open class LineChartRenderer: LineRadarRenderer
         }
     }
     
+    /// Calculates the pixel X position where the line should be clipped during horizontal animation
+    private func calculateAnimationClipX(dataSet: ILineChartDataSet, trans: Transformer) -> CGFloat?
+    {
+        let phaseX = animator.phaseX
+        guard phaseX < 1.0 else { return nil }
+
+        let entryCount = dataSet.entryCount
+        guard entryCount > 1 else { return nil }
+
+        // Calculate the "virtual" index position based on phaseX
+        let animatedIndex = Double(entryCount - 1) * phaseX
+        let floorIndex = Int(animatedIndex)
+        let fraction = animatedIndex - Double(floorIndex)
+
+        // Get the entries for interpolation
+        guard let e1 = dataSet.entryForIndex(floorIndex) else { return nil }
+
+        let x: Double
+        if fraction > 0, let e2 = dataSet.entryForIndex(floorIndex + 1) {
+            // Interpolate X position between two data points
+            x = e1.x + (e2.x - e1.x) * fraction
+        } else {
+            x = e1.x
+        }
+
+        // Convert to pixel coordinates
+        let pt = trans.pixelForValues(x: x, y: 0)
+        return pt.x
+    }
+
     @objc open func drawDataSet(context: CGContext, dataSet: ILineChartDataSet)
     {
         if dataSet.entryCount < 1
         {
             return
         }
-        
+
         context.saveGState()
-        
+
+        // Apply horizontal animation clipping if needed
+        let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+        if useHorizontalAnimation, let dataProvider = dataProvider {
+            let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
+            if let clipX = calculateAnimationClipX(dataSet: dataSet, trans: trans) {
+                let clipRect = CGRect(
+                    x: viewPortHandler.contentLeft,
+                    y: viewPortHandler.contentTop,
+                    width: clipX - viewPortHandler.contentLeft,
+                    height: viewPortHandler.contentHeight
+                )
+                context.clip(to: clipRect)
+            }
+        }
+
         context.setLineWidth(dataSet.lineWidth)
         if dataSet.lineDashLengths != nil
         {
@@ -67,35 +112,46 @@ open class LineChartRenderer: LineRadarRenderer
         {
             context.setLineDash(phase: 0.0, lengths: [])
         }
-        
+
         context.setLineCap(dataSet.lineCapType)
-        
+
         // if drawing cubic lines is enabled
         switch dataSet.mode
         {
         case .linear: fallthrough
         case .stepped:
             drawLinear(context: context, dataSet: dataSet)
-            
+
         case .cubicBezier:
             drawCubicBezier(context: context, dataSet: dataSet)
-            
+
         case .horizontalBezier:
             drawHorizontalBezier(context: context, dataSet: dataSet)
         }
-        
+
         context.restoreGState()
     }
     
     @objc open func drawCubicBezier(context: CGContext, dataSet: ILineChartDataSet)
     {
         guard let dataProvider = dataProvider else { return }
-        
+
         let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
-        
-        let phaseY = animator.phaseY
-        
+
+        // Use phaseY = 1.0 for horizontal animation (clipping handles the animation)
+        let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+        let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
+
+        // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+        // (we want to draw all data points, clipping will handle visibility)
+        let savedPhaseX = animator.phaseX
+        if useHorizontalAnimation {
+            animator.phaseX = 1.0
+        }
         _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
+        if useHorizontalAnimation {
+            animator.phaseX = savedPhaseX
+        }
         
         // get the color that is specified for this position from the DataSet
         let drawingColor = dataSet.colors.first!
@@ -188,12 +244,22 @@ open class LineChartRenderer: LineRadarRenderer
     @objc open func drawHorizontalBezier(context: CGContext, dataSet: ILineChartDataSet)
     {
         guard let dataProvider = dataProvider else { return }
-        
+
         let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
-        
-        let phaseY = animator.phaseY
-        
+
+        // Use phaseY = 1.0 for horizontal animation (clipping handles the animation)
+        let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+        let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
+
+        // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+        let savedPhaseX = animator.phaseX
+        if useHorizontalAnimation {
+            animator.phaseX = 1.0
+        }
         _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
+        if useHorizontalAnimation {
+            animator.phaseX = savedPhaseX
+        }
         
         // get the color that is specified for this position from the DataSet
         let drawingColor = dataSet.colors.first!
@@ -305,18 +371,28 @@ open class LineChartRenderer: LineRadarRenderer
     @objc open func drawLinear(context: CGContext, dataSet: ILineChartDataSet)
     {
         guard let dataProvider = dataProvider else { return }
-        
+
         let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
-        
+
         let valueToPixelMatrix = trans.valueToPixelMatrix
-        
+
         let entryCount = dataSet.entryCount
         let isDrawSteppedEnabled = dataSet.mode == .stepped
         let pointsPerEntryPair = isDrawSteppedEnabled ? 4 : 2
-        
-        let phaseY = animator.phaseY
-        
+
+        // Use phaseY = 1.0 for horizontal animation (clipping handles the animation)
+        let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+        let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
+
+        // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+        let savedPhaseX = animator.phaseX
+        if useHorizontalAnimation {
+            animator.phaseX = 1.0
+        }
         _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
+        if useHorizontalAnimation {
+            animator.phaseX = savedPhaseX
+        }
         
         // if drawing filled is enabled
         if dataSet.isDrawFilledEnabled && entryCount > 0
@@ -421,7 +497,9 @@ open class LineChartRenderer: LineRadarRenderer
     /// Generates the path that is used for filled drawing.
     private func generateFilledPath(dataSet: ILineChartDataSet, fillMin: CGFloat, bounds: XBounds, matrix: CGAffineTransform) -> CGPath
     {
-        let phaseY = animator.phaseY
+        // Use phaseY = 1.0 for horizontal animation (clipping handles the animation)
+        let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+        let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
         let isDrawSteppedEnabled = dataSet.mode == .stepped
         let matrix = matrix
         
@@ -475,55 +553,74 @@ open class LineChartRenderer: LineRadarRenderer
         if isDrawingValuesAllowed(dataProvider: dataProvider)
         {
             let dataSets = lineData.dataSets
-            
-            let phaseY = animator.phaseY
-            
+
             var pt = CGPoint()
-            
+
             for i in 0 ..< dataSets.count
             {
                 guard let
                     dataSet = dataSets[i] as? ILineChartDataSet,
                     shouldDrawValues(forDataSet: dataSet)
                     else { continue }
-                
+
                 let valueFont = dataSet.valueFont
-                
+
                 guard let formatter = dataSet.valueFormatter else { continue }
-                
+
                 let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
                 let valueToPixelMatrix = trans.valueToPixelMatrix
-                
+
+                // Use phaseY = 1.0 for horizontal animation
+                let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+                let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
+
+                // Calculate clip position for horizontal animation
+                let clipX: CGFloat? = useHorizontalAnimation ? calculateAnimationClipX(dataSet: dataSet, trans: trans) : nil
+
                 let iconsOffset = dataSet.iconsOffset
-                
+
                 // make sure the values do not interfear with the circles
                 var valOffset = Int(dataSet.circleRadius * 1.75)
-                
+
                 if !dataSet.isDrawCirclesEnabled
                 {
                     valOffset = valOffset / 2
                 }
-                
+
+                // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+                let savedPhaseX = animator.phaseX
+                if useHorizontalAnimation {
+                    animator.phaseX = 1.0
+                }
                 _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
+                if useHorizontalAnimation {
+                    animator.phaseX = savedPhaseX
+                }
 
                 for j in _xBounds
                 {
                     guard let e = dataSet.entryForIndex(j) else { break }
-                    
+
                     pt.x = CGFloat(e.x)
                     pt.y = CGFloat(e.y * phaseY)
                     pt = pt.applying(valueToPixelMatrix)
-                    
+
                     if (!viewPortHandler.isInBoundsRight(pt.x))
                     {
                         break
                     }
-                    
+
+                    // Skip values beyond animation clip boundary for horizontal animation
+                    if let clipX = clipX, pt.x > clipX
+                    {
+                        continue
+                    }
+
                     if (!viewPortHandler.isInBoundsLeft(pt.x) || !viewPortHandler.isInBoundsY(pt.y))
                     {
                         continue
                     }
-                    
+
                     if dataSet.isDrawValuesEnabled {
                         ChartUtils.drawText(
                             context: context,
@@ -538,7 +635,7 @@ open class LineChartRenderer: LineRadarRenderer
                             align: .center,
                             attributes: [NSAttributedString.Key.font: valueFont, NSAttributedString.Key.foregroundColor: dataSet.valueTextColorAt(j)])
                     }
-                    
+
                     if let icon = e.icon, dataSet.isDrawIconsEnabled
                     {
                         ChartUtils.drawImage(context: context,
@@ -563,14 +660,12 @@ open class LineChartRenderer: LineRadarRenderer
             let dataProvider = dataProvider,
             let lineData = dataProvider.lineData
             else { return }
-        
-        let phaseY = animator.phaseY
 
         let dataSets = lineData.dataSets
-        
+
         var pt = CGPoint()
         var rect = CGRect()
-        
+
         // If we redraw the data, remove and repopulate accessible elements to update label values and frames
         accessibleChartElements.removeAll()
         accessibilityOrderedElements = accessibilityCreateEmptyOrderedElements()
@@ -588,29 +683,44 @@ open class LineChartRenderer: LineRadarRenderer
         for i in 0 ..< dataSets.count
         {
             guard let dataSet = lineData.getDataSetByIndex(i) as? ILineChartDataSet else { continue }
-            
+
             if !dataSet.isVisible || dataSet.entryCount == 0
             {
                 continue
             }
-            
+
             let trans = dataProvider.getTransformer(forAxis: dataSet.axisDependency)
             let valueToPixelMatrix = trans.valueToPixelMatrix
-            
+
+            // Use phaseY = 1.0 for horizontal animation
+            let useHorizontalAnimation = dataSet.animationDirection == .horizontal
+            let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
+
+            // Calculate clip position for horizontal animation
+            let clipX: CGFloat? = useHorizontalAnimation ? calculateAnimationClipX(dataSet: dataSet, trans: trans) : nil
+
+            // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+            let savedPhaseX = animator.phaseX
+            if useHorizontalAnimation {
+                animator.phaseX = 1.0
+            }
             _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
-            
+            if useHorizontalAnimation {
+                animator.phaseX = savedPhaseX
+            }
+
             let circleRadius = dataSet.circleRadius
             let circleDiameter = circleRadius * 2.0
             let circleHoleRadius = dataSet.circleHoleRadius
             let circleHoleDiameter = circleHoleRadius * 2.0
-            
+
             let drawCircleHole = dataSet.isDrawCircleHoleEnabled &&
                 circleHoleRadius < circleRadius &&
                 circleHoleRadius > 0.0
             let drawTransparentCircleHole = drawCircleHole &&
                 (dataSet.circleHoleColor == nil ||
                     dataSet.circleHoleColor == NSUIColor.clear)
-            
+
             for j in _xBounds
             {
                 guard let e = dataSet.entryForIndex(j) else { break }
@@ -618,12 +728,18 @@ open class LineChartRenderer: LineRadarRenderer
                 pt.x = CGFloat(e.x)
                 pt.y = CGFloat(e.y * phaseY)
                 pt = pt.applying(valueToPixelMatrix)
-                
+
                 if (!viewPortHandler.isInBoundsRight(pt.x))
                 {
                     break
                 }
-                
+
+                // Skip circles beyond animation clip boundary for horizontal animation
+                if let clipX = clipX, pt.x > clipX
+                {
+                    continue
+                }
+
                 // make sure the circles don't do shitty things outside bounds
                 if (!viewPortHandler.isInBoundsLeft(pt.x) || !viewPortHandler.isInBoundsY(pt.y))
                 {
