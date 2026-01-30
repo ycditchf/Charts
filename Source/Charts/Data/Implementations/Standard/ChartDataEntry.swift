@@ -15,7 +15,13 @@ open class ChartDataEntry: ChartDataEntryBase, NSCopying
 {
     /// the x value
     @objc open var x = 0.0
-    
+
+    /// 平滑过渡动画的起始 Y 值
+    private var _fromY: Double = 0.0
+
+    /// 是否启用平滑过渡动画
+    private var _enableSmoothTransition: Bool = false
+
     public required init()
     {
         super.init()
@@ -73,23 +79,53 @@ open class ChartDataEntry: ChartDataEntryBase, NSCopying
         self.data = data
     }
         
+    // MARK: - Smooth Transition Animation
+
+    /// 配置平滑过渡动画
+    /// - Parameters:
+    ///   - fromValue: 起始值（当前显示的值）
+    ///   - toValue: 目标值（新的数据值）
+    @objc open func configureSmoothTransition(from fromValue: Double, to toValue: Double) {
+        self._fromY = fromValue
+        self._enableSmoothTransition = true
+        self.y = toValue
+    }
+
+    /// 禁用平滑过渡动画，回归默认动画
+    @objc open func disableSmoothTransition() {
+        self._enableSmoothTransition = false
+        self._fromY = 0.0
+    }
+
+    /// 平滑过渡的起始值
+    @objc open var fromY: Double {
+        return _fromY
+    }
+
+    /// 是否启用平滑过渡动画
+    @objc open var enableSmoothTransition: Bool {
+        return _enableSmoothTransition
+    }
+
     // MARK: NSObject
-    
+
     open override var description: String
     {
         return "ChartDataEntry, x: \(x), y \(y)"
     }
-    
+
     // MARK: NSCopying
-    
+
     open func copy(with zone: NSZone? = nil) -> Any
     {
         let copy = type(of: self).init()
-        
+
         copy.x = x
         copy.y = y
         copy.data = data
-        
+        copy._fromY = _fromY
+        copy._enableSmoothTransition = _enableSmoothTransition
+
         return copy
     }
 }

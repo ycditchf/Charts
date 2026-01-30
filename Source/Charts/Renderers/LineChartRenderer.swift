@@ -49,6 +49,15 @@ open class LineChartRenderer: LineRadarRenderer
         }
     }
     
+    /// 计算考虑平滑过渡的 Y 值
+    /// 如果启用了平滑过渡，从 fromY 插值到 y；否则使用默认的 y * phaseY
+    private func effectiveY(for entry: ChartDataEntry, phaseY: Double) -> Double {
+        if entry.enableSmoothTransition {
+            return entry.fromY + (entry.y - entry.fromY) * phaseY
+        }
+        return entry.y * phaseY
+    }
+
     /// Calculates the pixel X position where the line should be clipped during horizontal animation
     private func calculateAnimationClipX(dataSet: ILineChartDataSet, trans: Transformer) -> CGFloat?
     {
@@ -185,8 +194,8 @@ open class LineChartRenderer: LineRadarRenderer
             if cur == nil { return }
             
             // let the spline start
-            cubicPath.move(to: CGPoint(x: CGFloat(cur.x), y: CGFloat(cur.y * phaseY)), transform: valueToPixelMatrix)
-            
+            cubicPath.move(to: CGPoint(x: CGFloat(cur.x), y: CGFloat(effectiveY(for: cur, phaseY: phaseY))), transform: valueToPixelMatrix)
+
             for j in _xBounds.dropFirst()  // same as firstIndex
             {
                 prevPrev = prev
@@ -195,29 +204,34 @@ open class LineChartRenderer: LineRadarRenderer
 
                 nextIndex = j + 1 < dataSet.entryCount ? j + 1 : j
                 next = dataSet.entryForIndex(nextIndex)
-                
-                if next == nil { break }
-                
-                prevDx = CGFloat(cur.x - prevPrev.x) * intensity
-                prevDy = CGFloat(cur.y - prevPrev.y) * intensity
-                curDx = CGFloat(next.x - prev.x) * intensity
-                curDy = CGFloat(next.y - prev.y) * intensity
 
-                if prev.y == 0 && cur.y == 0 {
+                if next == nil { break }
+
+                let effPrevPrevY = effectiveY(for: prevPrev, phaseY: phaseY)
+                let effPrevY = effectiveY(for: prev, phaseY: phaseY)
+                let effCurY = effectiveY(for: cur, phaseY: phaseY)
+                let effNextY = effectiveY(for: next, phaseY: phaseY)
+
+                prevDx = CGFloat(cur.x - prevPrev.x) * intensity
+                prevDy = CGFloat(effCurY - effPrevPrevY) * intensity
+                curDx = CGFloat(next.x - prev.x) * intensity
+                curDy = CGFloat(effNextY - effPrevY) * intensity
+
+                if effPrevY == 0 && effCurY == 0 {
                     cubicPath.addLine(to: CGPoint(
                         x: CGFloat(cur.x),
-                        y: CGFloat(cur.y) * CGFloat(phaseY)), transform: valueToPixelMatrix)
+                        y: CGFloat(effCurY)), transform: valueToPixelMatrix)
                 } else {
                     cubicPath.addCurve(
                         to: CGPoint(
                             x: CGFloat(cur.x),
-                            y: CGFloat(cur.y) * CGFloat(phaseY)),
+                            y: CGFloat(effCurY)),
                         control1: CGPoint(
                             x: CGFloat(prev.x) + prevDx,
-                            y: (CGFloat(prev.y) + prevDy) * CGFloat(phaseY)),
+                            y: CGFloat(effPrevY) + prevDy),
                         control2: CGPoint(
                             x: CGFloat(cur.x) - curDx,
-                            y: (CGFloat(cur.y) - curDy) * CGFloat(phaseY)),
+                            y: CGFloat(effCurY) - curDy),
                         transform: valueToPixelMatrix)
                 }
             }
@@ -273,48 +287,51 @@ open class LineChartRenderer: LineRadarRenderer
         {
             var prev: ChartDataEntry! = dataSet.entryForIndex(_xBounds.min)
             var cur: ChartDataEntry! = prev
-            
+
             if cur == nil { return }
-            
+
             // let the spline start
-            cubicPath.move(to: CGPoint(x: CGFloat(cur.x), y: CGFloat(cur.y * phaseY)), transform: valueToPixelMatrix)
-            
+            cubicPath.move(to: CGPoint(x: CGFloat(cur.x), y: CGFloat(effectiveY(for: cur, phaseY: phaseY))), transform: valueToPixelMatrix)
+
             for j in _xBounds.dropFirst()
             {
                 prev = cur
                 cur = dataSet.entryForIndex(j)
-                
+
                 let cpx = CGFloat(prev.x + (cur.x - prev.x) / 2.0)
-                
+
+                let prevEffY = effectiveY(for: prev, phaseY: phaseY)
+                let curEffY = effectiveY(for: cur, phaseY: phaseY)
+
                 cubicPath.addCurve(
                     to: CGPoint(
                         x: CGFloat(cur.x),
-                        y: CGFloat(cur.y * phaseY)),
+                        y: CGFloat(curEffY)),
                     control1: CGPoint(
                         x: cpx,
-                        y: CGFloat(prev.y * phaseY)),
+                        y: CGFloat(prevEffY)),
                     control2: CGPoint(
                         x: cpx,
-                        y: CGFloat(cur.y * phaseY)),
+                        y: CGFloat(curEffY)),
                     transform: valueToPixelMatrix)
             }
         }
-        
+
         context.saveGState()
-        
+
         if dataSet.isDrawFilledEnabled
         {
             // Copy this path because we make changes to it
             let fillPath = cubicPath.mutableCopy()
-            
+
             drawCubicFill(context: context, dataSet: dataSet, spline: fillPath!, matrix: valueToPixelMatrix, bounds: _xBounds)
         }
-        
+
         context.beginPath()
         context.addPath(cubicPath)
         context.setStrokeColor(drawingColor.cgColor)
         context.strokePath()
-        
+
         context.restoreGState()
     }
     
@@ -411,30 +428,30 @@ open class LineChartRenderer: LineRadarRenderer
         for j in _xBounds.dropLast()
         {
             var e: ChartDataEntry! = dataSet.entryForIndex(j)
-            
+
             if e == nil { continue }
-            
+
             _lineSegments[0].x = CGFloat(e.x)
-            _lineSegments[0].y = CGFloat(e.y * phaseY)
-            
+            _lineSegments[0].y = CGFloat(effectiveY(for: e, phaseY: phaseY))
+
             if j < _xBounds.max
             {
                 // TODO: remove the check.
                 // With the new XBounds iterator, j is always smaller than _xBounds.max
                 // Keeping this check for a while, if xBounds have no further breaking changes, it should be safe to remove the check
                 e = dataSet.entryForIndex(j + 1)
-                
+
                 if e == nil { break }
-                
+
                 if isDrawSteppedEnabled
                 {
                     _lineSegments[1] = CGPoint(x: CGFloat(e.x), y: _lineSegments[0].y)
                     _lineSegments[2] = _lineSegments[1]
-                    _lineSegments[3] = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY))
+                    _lineSegments[3] = CGPoint(x: CGFloat(e.x), y: CGFloat(effectiveY(for: e, phaseY: phaseY)))
                 }
                 else
                 {
-                    _lineSegments[1] = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY))
+                    _lineSegments[1] = CGPoint(x: CGFloat(e.x), y: CGFloat(effectiveY(for: e, phaseY: phaseY)))
                 }
             }
             else
@@ -512,22 +529,22 @@ open class LineChartRenderer: LineRadarRenderer
         if e != nil
         {
             filled.move(to: CGPoint(x: CGFloat(e.x), y: fillMin), transform: matrix)
-            filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY)), transform: matrix)
+            filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(effectiveY(for: e, phaseY: phaseY))), transform: matrix)
         }
-        
+
         // create a new path
         for x in stride(from: (bounds.min + 1), through: bounds.range + bounds.min, by: 1)
         {
             guard let e = dataSet.entryForIndex(x) else { continue }
             guard !e.y.isNaN else { continue }  // 跳过 NAN 值
-            
+
             if isDrawSteppedEnabled
             {
                 guard let ePrev = dataSet.entryForIndex(x-1) else { continue }
-                filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(ePrev.y * phaseY)), transform: matrix)
+                filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(effectiveY(for: ePrev, phaseY: phaseY))), transform: matrix)
             }
-            
-            filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY)), transform: matrix)
+
+            filled.addLine(to: CGPoint(x: CGFloat(e.x), y: CGFloat(effectiveY(for: e, phaseY: phaseY))), transform: matrix)
             lastValidEntry = e  // 更新最后有效数据点
         }
         
@@ -602,7 +619,7 @@ open class LineChartRenderer: LineRadarRenderer
                     guard let e = dataSet.entryForIndex(j) else { break }
 
                     pt.x = CGFloat(e.x)
-                    pt.y = CGFloat(e.y * phaseY)
+                    pt.y = CGFloat(effectiveY(for: e, phaseY: phaseY))
                     pt = pt.applying(valueToPixelMatrix)
 
                     if (!viewPortHandler.isInBoundsRight(pt.x))
@@ -726,7 +743,7 @@ open class LineChartRenderer: LineRadarRenderer
                 guard let e = dataSet.entryForIndex(j) else { break }
 
                 pt.x = CGFloat(e.x)
-                pt.y = CGFloat(e.y * phaseY)
+                pt.y = CGFloat(effectiveY(for: e, phaseY: phaseY))
                 pt = pt.applying(valueToPixelMatrix)
 
                 if (!viewPortHandler.isInBoundsRight(pt.x))
@@ -745,8 +762,8 @@ open class LineChartRenderer: LineRadarRenderer
                 {
                     continue
                 }
-                
-                
+
+
                 // Skip Circles and Accessibility if not enabled,
                 // reduces CPU significantly if not needed
                 if !dataSet.isDrawCirclesEnabled
@@ -860,7 +877,7 @@ open class LineChartRenderer: LineRadarRenderer
             }
             
             let x = e.x // get the x-position
-            let y = e.y * Double(animator.phaseY)
+            let y = effectiveY(for: e, phaseY: animator.phaseY)
             
             if x > chartXMax * animator.phaseX
             {
