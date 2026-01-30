@@ -151,16 +151,13 @@ open class LineChartRenderer: LineRadarRenderer
         let useHorizontalAnimation = dataSet.animationDirection == .horizontal
         let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
 
-        // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
-        // (we want to draw all data points, clipping will handle visibility)
+        // Always set phaseX to 1.0 for XBounds so all data points are included.
+        // For horizontal animation, clipping rect handles visibility.
+        // For vertical/smooth transitions, all points must be visible.
         let savedPhaseX = animator.phaseX
-        if useHorizontalAnimation {
-            animator.phaseX = 1.0
-        }
+        animator.phaseX = 1.0
         _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
-        if useHorizontalAnimation {
-            animator.phaseX = savedPhaseX
-        }
+        animator.phaseX = savedPhaseX
         
         // get the color that is specified for this position from the DataSet
         let drawingColor = dataSet.colors.first!
@@ -265,19 +262,15 @@ open class LineChartRenderer: LineRadarRenderer
         let useHorizontalAnimation = dataSet.animationDirection == .horizontal
         let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
 
-        // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+        // Always set phaseX to 1.0 for XBounds so all data points are included.
         let savedPhaseX = animator.phaseX
-        if useHorizontalAnimation {
-            animator.phaseX = 1.0
-        }
+        animator.phaseX = 1.0
         _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
-        if useHorizontalAnimation {
-            animator.phaseX = savedPhaseX
-        }
-        
+        animator.phaseX = savedPhaseX
+
         // get the color that is specified for this position from the DataSet
         let drawingColor = dataSet.colors.first!
-        
+
         // the path for the cubic-spline
         let cubicPath = CGMutablePath()
         
@@ -401,16 +394,12 @@ open class LineChartRenderer: LineRadarRenderer
         let useHorizontalAnimation = dataSet.animationDirection == .horizontal
         let phaseY = useHorizontalAnimation ? 1.0 : animator.phaseY
 
-        // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+        // Always set phaseX to 1.0 for XBounds so all data points are included.
         let savedPhaseX = animator.phaseX
-        if useHorizontalAnimation {
-            animator.phaseX = 1.0
-        }
+        animator.phaseX = 1.0
         _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
-        if useHorizontalAnimation {
-            animator.phaseX = savedPhaseX
-        }
-        
+        animator.phaseX = savedPhaseX
+
         // if drawing filled is enabled
         if dataSet.isDrawFilledEnabled && entryCount > 0
         {
@@ -604,15 +593,11 @@ open class LineChartRenderer: LineRadarRenderer
                     valOffset = valOffset / 2
                 }
 
-                // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+                // Always set phaseX to 1.0 for XBounds so all data points are included.
                 let savedPhaseX = animator.phaseX
-                if useHorizontalAnimation {
-                    animator.phaseX = 1.0
-                }
+                animator.phaseX = 1.0
                 _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
-                if useHorizontalAnimation {
-                    animator.phaseX = savedPhaseX
-                }
+                animator.phaseX = savedPhaseX
 
                 for j in _xBounds
                 {
@@ -716,15 +701,11 @@ open class LineChartRenderer: LineRadarRenderer
             // Calculate clip position for horizontal animation
             let clipX: CGFloat? = useHorizontalAnimation ? calculateAnimationClipX(dataSet: dataSet, trans: trans) : nil
 
-            // For horizontal animation, temporarily set phaseX to 1.0 for XBounds calculation
+            // Always set phaseX to 1.0 for XBounds so all data points are included.
             let savedPhaseX = animator.phaseX
-            if useHorizontalAnimation {
-                animator.phaseX = 1.0
-            }
+            animator.phaseX = 1.0
             _xBounds.set(chart: dataProvider, dataSet: dataSet, animator: animator)
-            if useHorizontalAnimation {
-                animator.phaseX = savedPhaseX
-            }
+            animator.phaseX = savedPhaseX
 
             let circleRadius = dataSet.circleRadius
             let circleDiameter = circleRadius * 2.0
