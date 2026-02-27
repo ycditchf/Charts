@@ -101,6 +101,11 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     // 延迟显示 highlight，否则会闪一下
     private var _delayShowHighLight = false
     private var _showHighLight = false
+    private var _touchBeganLocation: CGPoint?
+    #if os(iOS)
+    private let _impactFeedback = UIImpactFeedbackGenerator(style: .light)
+//    private let _selectionFeedback = UISelectionFeedbackGenerator()
+    #endif
     
     public override init(frame: CGRect)
     {
@@ -1999,24 +2004,35 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func nsuiTouchesBegan(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
         super.nsuiTouchesBegan(touches, withEvent: event)
-        parentScrollView?.isScrollEnabled = false
+        // 不立即禁用父滚动视图，让滚动手势能被正常识别
+        // 只有确认是长按后才禁用滚动
         _delayShowHighLight = true
+        _touchBeganLocation = touches.first?.location(in: self)
         print("class:\(String(describing: self)): \(#function)")
-        // 避免因为其他手势接收后闪现
+        // 延迟显示 highlight，模拟长按效果
+        // 如果在延迟期间 touch 被 scrollView 取消（nsuiTouchesCancelled），
+        // _delayShowHighLight 会被重置为 false，从而不会显示 highlight
         DispatchQueue.main.asyncAfter(deadline: .now()+0.1, execute: DispatchWorkItem(block: {
             if !self._delayShowHighLight {
                 return
             }
             self._showHighLight = true
-            
+            // 确认是长按后才禁用父滚动视图
+            self.parentScrollView?.isScrollEnabled = false
+
             guard let touch = touches.first else { return }
-            
+
             if !self.isHighLightPerTapEnabled { return }
-            
+
             let h = self.getHighlightByTouchPoint(touch.location(in: self))
-            
+
             self.lastHighlighted = h
             self.highlightValue(h, callDelegate: true)
+            // 长按确认，触觉反馈
+            #if os(iOS)
+            self._impactFeedback.impactOccurred()
+
+            #endif
         }))
 
     }
@@ -2024,16 +2040,36 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     open override func nsuiTouchesMoved(_ touches: Set<NSUITouch>, withEvent event: NSUIEvent?)
     {
         super.nsuiTouchesMoved(touches, withEvent: event)
-//        print("class:\(String(describing: self)): \(#function)")
+
+        // 延迟期间手指移动超过阈值，说明是滚动而非长按，取消 highlight
+        if _delayShowHighLight && !_showHighLight {
+            if let began = _touchBeganLocation, let touch = touches.first {
+                let current = touch.location(in: self)
+//                let dx = abs(current.x - began.x)
+                let dy = abs(current.y - began.y)
+                if dy > 10 {
+                    _delayShowHighLight = false
+                    return
+                }
+            }
+        }
+
         if !_showHighLight {
             return
         }
         guard let touch = touches.first else { return }
-        
+
         if !isHighLightPerTapEnabled { return }
-        
+
         let h = getHighlightByTouchPoint(touch.location(in: self))
-        
+
+        // 高亮数据点变化时，触觉反馈
+        if let h = h, h.x != lastHighlighted?.x {
+            #if os(iOS)
+            _impactFeedback.impactOccurred()
+            #endif
+        }
+
         lastHighlighted = h
         highlightValue(h, callDelegate: true)
     }
