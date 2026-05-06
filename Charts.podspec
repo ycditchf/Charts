@@ -15,5 +15,6 @@ Pod::Spec.new do |s|
 
   s.subspec "Core" do |ss|
     ss.source_files  = "Source/Charts/**/*.swift"
+    ss.resources = "PrivacyInfo.xcprivacy"
   end
 end

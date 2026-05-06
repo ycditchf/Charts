@@ -21,6 +21,7 @@ import Cocoa
 #endif
 
 /// Base-class of LineChart, BarChart, ScatterChart and CandleStickChart.
+@available(iOS 10.0, *)
 open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartDataProvider, NSUIGestureRecognizerDelegate
 {
     /// the maximum number of entries to which values will be drawn
