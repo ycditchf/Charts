@@ -105,7 +105,7 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
     private var _touchBeganLocation: CGPoint?
     #if os(iOS)
     private let _impactFeedback = UIImpactFeedbackGenerator(style: .light)
-//    private let _selectionFeedback = UISelectionFeedbackGenerator()
+    private let _selectionFeedback = UISelectionFeedbackGenerator()
     #endif
     
     public override init(frame: CGRect)
@@ -2032,7 +2032,7 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
             // 长按确认，触觉反馈
             #if os(iOS)
             self._impactFeedback.impactOccurred()
-
+            self._selectionFeedback.prepare()
             #endif
         }))
 
@@ -2067,7 +2067,8 @@ open class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChartD
         // 高亮数据点变化时，触觉反馈
         if let h = h, h.x != lastHighlighted?.x {
             #if os(iOS)
-            _impactFeedback.impactOccurred()
+            _selectionFeedback.selectionChanged()
+            _selectionFeedback.prepare()
             #endif
         }
 
